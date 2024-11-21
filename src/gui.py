@@ -11,7 +11,7 @@ class GUI:
 
         # Configuración de la pantalla
         self.screen = pygame.display.set_mode((1000, 700))
-        pygame.display.set_caption("Hola, Soy Vera")
+        pygame.display.set_caption("DriveVoice Control Panel")
 
         # Definir colores
         self.white = (246, 243, 236)  # Fondo blanco
@@ -23,6 +23,8 @@ class GUI:
             "Luces de Cabina": CommandHandler.state["luces_cabina"],
             "Luces Exteriores": CommandHandler.state["luces_exteriores"],
             "Puerta": CommandHandler.state["puerta"],
+            "Nivel de Combustible": CommandHandler.state["nivel_combustible"],
+            "Motor": CommandHandler.state["motor"],
             # Añade otros estados si es necesario
         }
 
@@ -33,14 +35,18 @@ class GUI:
             "Luces de Cabina": pygame.Rect(100, 50, widthBox, heightBox),
             "Luces Exteriores": pygame.Rect(400, 50, widthBox, heightBox),
             "Puerta": pygame.Rect(700, 50, widthBox, heightBox),
+            "Nivel de Combustible": pygame.Rect(100, 350, widthBox, heightBox),
+            "Motor": pygame.Rect(400, 350, widthBox, heightBox),
             # Añade otros botones si es necesario
         }
 
         # Cargar imágenes para los servicios
         self.images = {
             "Luces de Cabina": pygame.image.load('src/assets/luz_conductor.png'),
-            "Luces Exteriores": pygame.image.load('src/assets/luz_pasajeros.png'),
+            "Luces Exteriores": pygame.image.load('src/assets/light_car.png'),
             "Puerta": pygame.image.load('src/assets/puerta-img.png'),
+            "Nivel de Combustible": pygame.image.load('src/assets/level_fuel.png'),
+            "Motor": pygame.image.load('src/assets/engine.png'),
             # Añade otras imágenes si es necesario
         }
 
@@ -57,11 +63,14 @@ class GUI:
             pygame.draw.rect(self.screen, color, rect)
             image = self.images[boton]
             self.screen.blit(image, (rect.x + 35, rect.y + 10))  # Dibujar la imagen del servicio
-            texto_estado = "Encendido" if self.button_status[boton] else "Apagado"
-            texto = self.fuente.render(f"{texto_estado}", True, self.black)
-            self.screen.blit(texto, (rect.x + 50, rect.y + 180))
-            texto_servicio = self.fuente.render(boton.replace('_', ' ').title(), True, self.black)
-            self.screen.blit(texto_servicio, (rect.x + 20, rect.y + 200))
+            if (boton == "Nivel de Combustible"):
+                text_status = ""
+            else:
+                text_status = "Encendido" if self.button_status[boton] else "Apagado"
+            text = self.fuente.render(f"{text_status}", True, self.black)
+            self.screen.blit(text, (rect.x + 50, rect.y + 180))
+            text_service = self.fuente.render(boton.replace('_', ' ').title(), True, self.black)
+            self.screen.blit(text_service, (rect.x + 20, rect.y + 200))
 
     def run(self):
         clock = pygame.time.Clock()
@@ -82,11 +91,11 @@ class GUI:
                     sys.exit()
                 elif event.type == MOUSEBUTTONDOWN:
                     if event.button == 1:  # Clic izquierdo
-                        for boton, rect in self.buttons.items():
+                        for button, rect in self.buttons.items():
                             if rect.collidepoint(event.pos):
                                 # Actualizar el estado y ejecutar el comando correspondiente
-                                self.button_status[boton] = not self.button_status[boton]
-                                self.execute_command_from_gui(boton)
+                                self.button_status[button] = not self.button_status[button]
+                                self.execute_command_from_gui(button)
 
             pygame.display.update()
             clock.tick(60)  # Limitar a 60 FPS
@@ -96,19 +105,23 @@ class GUI:
         self.button_status["Luces de Cabina"] = CommandHandler.state["luces_cabina"]
         self.button_status["Luces Exteriores"] = CommandHandler.state["luces_exteriores"]
         self.button_status["Puerta"] = CommandHandler.state["puerta"]
+        self.button_status["Nivel de Combustible"] = CommandHandler.state["nivel_combustible"]
+        self.button_status["Motor"] = CommandHandler.state["motor"]
         # Actualiza otros estados si es necesario
 
-    def execute_command_from_gui(self, boton):
+    def execute_command_from_gui(self, button):
         # Mapear el botón a un comando de voz equivalente
         command_map = {
-            "Luces de Cabina": "encender luces de cabina" if self.button_status[boton] else "apagar luces de cabina",
-            "Luces Exteriores": "encender luces de exteriores" if self.button_status[boton] else "apagar luces de exteriores",
-            "Puerta": "abrir puerta" if self.button_status[boton] else "cerrar puerta",
+            "Luces de Cabina": "encender luces de cabina" if self.button_status[button] else "apagar luces de cabina",
+            "Luces Exteriores": "encender luces exteriores" if self.button_status[button] else "apagar luces exteriores",
+            "Puerta": "abrir puerta" if self.button_status[button] else "cerrar puerta",
+            "Nivel de Combustible": "consultar nivel de combustible",
+            "Motor": "encender motor" if self.button_status[button] else "apagar motor",
             # Añade otros mapeos si es necesario
         }
-        command = command_map.get(boton)
+        command = command_map.get(button)
         if command:
             # Enviar el comando al CommandHandler
             CommandHandler.execute_command(command)
         else:
-            print(f"No se encontró un comando para el botón {boton}")
+            print(f"No se encontró un comando para el botón {button}")

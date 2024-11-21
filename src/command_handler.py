@@ -15,7 +15,8 @@ class CommandHandler:
         "encender luces de cabina", "apagar luces de cabina",
         "encender luces exteriores", "apagar luces exteriores",
         "abrir puerta", "cerrar puerta",
-        "consultar nivel de combustible", "consultar estado del motor"
+        "consultar nivel de combustible", 
+        "encender motor", "apagar motor",
     ]
 
     # Inicialización de modelos y parámetros
@@ -36,7 +37,7 @@ class CommandHandler:
         "luces_exteriores": False,
         "puerta": False,
         "nivel_combustible": None,
-        "motor_encendido": False,
+        "motor": False,
     }
 
     # Lock para acceso seguro al estado compartido
@@ -92,8 +93,8 @@ class CommandHandler:
 
             elif command == "apagar luces exteriores":
                 if cls.state["luces_exteriores"]:
-                    sender.lights_command(exterior=False, interior=cls.state['luces_cabina'])
                     cls.state["luces_exteriores"] = False
+                    sender.lights_command(exterior=False, interior=cls.state['luces_cabina'])
                 else:
                     message = "Las luces exteriores ya están apagadas."
 
@@ -110,15 +111,20 @@ class CommandHandler:
                     cls.state["puerta"] = False
                 else:
                     message = "La puerta ya está cerrada."
-
             elif command == "consultar nivel de combustible":
                 sender.fuel_level_request()
-                # Simula que el nivel será actualizado por un receptor
-                message = "Solicitando nivel de combustible. Consulte el receptor para el valor actualizado."
-
-            elif command == "consultar estado del motor":
-                message = f"El motor está {'encendido' if cls.state['motor_encendido'] else 'apagado'}."
-
+            elif command == "encender motor":
+                if not cls.state["motor"]:
+                    sender.engine_control(True)
+                    cls.state["motor"] = True
+                else:
+                    message = "El motor ya está encendido."
+            elif command == "apagar motor":
+                if cls.state["motor"]:
+                    sender.engine_control(False)
+                    cls.state["motor"] = False
+                else:
+                    message = "El motor ya está apagado."
             else:
                 best_match = cls.get_best_match(command)
                 if best_match:
