@@ -13,7 +13,7 @@ class SpeechRecognizer:
         self.recognizer = vosk.KaldiRecognizer(self.model, self.rate)
         self.audio_buffer = deque(maxlen=2)
         self.last_command_time = 0
-        self.keyword_list = keyword_list if keyword_list else ["control", "activar", "inicia", "inicio", "comando", "comienza", "oye vera", "hey vera", "hola vera", "vera"]
+        self.keyword_list = keyword_list if keyword_list else ["control", "activar", "inicia", "inicio", "comando"]
         self.audio_handler = AudioStreamHandler(rate=self.rate)
 
     def start_stream(self):

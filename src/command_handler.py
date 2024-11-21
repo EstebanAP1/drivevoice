@@ -7,6 +7,7 @@ import threading
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 import fuzzywuzzy.process as fuzz
+from can_sender import CanSender
 
 # Lista global de comandos disponibles
 commands_list = [
@@ -64,11 +65,13 @@ class CommandHandler:
 
     @classmethod
     def execute_command(cls, command):
+        sender = CanSender()
         with cls.state_lock:
             if "encender luces de cabina" == command:
                 if not cls.state["luces_cabina"]:
                     cls.state["luces_cabina"] = True
                     message = "Luces de cabina encendidas."
+                    sender.send_message()
                 else:
                     message = "Las luces de cabina ya están encendidas."
             elif "apagar luces de cabina" == command:
