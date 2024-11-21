@@ -38,14 +38,14 @@ class GUI:
 
         # Cargar imágenes para los servicios
         self.images = {
-            "Luces de Cabina": pygame.image.load('./src/assets/luz_conductor.png'),
-            "Luces de Lectura": pygame.image.load('./src/assets/luz_pasajeros.png'),
-            "Puerta": pygame.image.load('./src/assets/puerta-img.png'),
+            "Luces de Cabina": pygame.image.load('src/assets/luz_conductor.png'),
+            "Luces de Lectura": pygame.image.load('src/assets/luz_pasajeros.png'),
+            "Puerta": pygame.image.load('src/assets/puerta-img.png'),
             # Añade otras imágenes si es necesario
         }
 
         # Cargar imagen de fondo
-        self.bg = pygame.image.load('./src/assets/bg-interfaz-2.png')
+        self.bg = pygame.image.load('src/assets/bg-interfaz-2.png')
 
         # Fuente para el texto
         self.fuente = pygame.font.Font(None, 25)
