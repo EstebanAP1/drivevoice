@@ -3,13 +3,18 @@ import threading
 import logging
 from command_handler import CommandHandler
 from speech_recognizer import SpeechRecognizer
+from can_receptor import CanReceptor
 from gui import GUI
+
 
 # Configuración del logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
     CommandHandler.load_model()
+
+    # Crear instancia del receptor CAN
+    receptor = CanReceptor()
 
     # Crear instancia de la GUI
     gui = GUI()
@@ -25,6 +30,10 @@ def main():
 
     # Iniciar el hilo del reconocedor de voz
     recognizer_thread.start()
+
+    # Ejecutar el receptor CAN en un hilo aparte
+    receptor_thread = threading.Thread(target=receptor.receive)
+    receptor_thread.start()
 
     # Ejecutar la interfaz gráfica en el hilo principal
     gui.run()

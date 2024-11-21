@@ -21,7 +21,7 @@ class GUI:
         # Obtener el estado inicial desde CommandHandler
         self.button_status = {
             "Luces de Cabina": CommandHandler.state["luces_cabina"],
-            "Luces de Lectura": CommandHandler.state["luces_lectura"],
+            "Luces Exteriores": CommandHandler.state["luces_exteriores"],
             "Puerta": CommandHandler.state["puerta"],
             # Añade otros estados si es necesario
         }
@@ -31,7 +31,7 @@ class GUI:
         # Definir las áreas de los botones
         self.buttons = {
             "Luces de Cabina": pygame.Rect(100, 50, widthBox, heightBox),
-            "Luces de Lectura": pygame.Rect(400, 50, widthBox, heightBox),
+            "Luces Exteriores": pygame.Rect(400, 50, widthBox, heightBox),
             "Puerta": pygame.Rect(700, 50, widthBox, heightBox),
             # Añade otros botones si es necesario
         }
@@ -39,7 +39,7 @@ class GUI:
         # Cargar imágenes para los servicios
         self.images = {
             "Luces de Cabina": pygame.image.load('src/assets/luz_conductor.png'),
-            "Luces de Lectura": pygame.image.load('src/assets/luz_pasajeros.png'),
+            "Luces Exteriores": pygame.image.load('src/assets/luz_pasajeros.png'),
             "Puerta": pygame.image.load('src/assets/puerta-img.png'),
             # Añade otras imágenes si es necesario
         }
@@ -94,7 +94,7 @@ class GUI:
     def update_button_status(self):
         # Actualizar el estado de los botones basándose en CommandHandler.state
         self.button_status["Luces de Cabina"] = CommandHandler.state["luces_cabina"]
-        self.button_status["Luces de Lectura"] = CommandHandler.state["luces_lectura"]
+        self.button_status["Luces Exteriores"] = CommandHandler.state["luces_exteriores"]
         self.button_status["Puerta"] = CommandHandler.state["puerta"]
         # Actualiza otros estados si es necesario
 
@@ -102,7 +102,7 @@ class GUI:
         # Mapear el botón a un comando de voz equivalente
         command_map = {
             "Luces de Cabina": "encender luces de cabina" if self.button_status[boton] else "apagar luces de cabina",
-            "Luces de Lectura": "encender luces de lectura" if self.button_status[boton] else "apagar luces de lectura",
+            "Luces Exteriores": "encender luces de exteriores" if self.button_status[boton] else "apagar luces de exteriores",
             "Puerta": "abrir puerta" if self.button_status[boton] else "cerrar puerta",
             # Añade otros mapeos si es necesario
         }

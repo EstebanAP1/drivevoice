@@ -1,4 +1,3 @@
-# command_handler.py
 import logging
 import time
 import numpy as np
@@ -6,36 +5,41 @@ import joblib
 import threading
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-import fuzzywuzzy.process as fuzz
+from fuzzywuzzy import process as fuzz
 from can_sender import CanSender
 
-# Lista global de comandos disponibles
-commands_list = [
-    "encender luces de cabina", "apagar luces de cabina",
-    "encender luces de lectura", "apagar luces de lectura",
-    "abrir puerta", "cerrar puerta",
-]
-
 class CommandHandler:
+
+    # Lista global de comandos disponibles
+    commands_list = [
+        "encender luces de cabina", "apagar luces de cabina",
+        "encender luces exteriores", "apagar luces exteriores",
+        "abrir puerta", "cerrar puerta",
+        "consultar nivel de combustible", "consultar estado del motor"
+    ]
+
+    # Inicialización de modelos y parámetros
     vectorizer = TfidfVectorizer().fit(commands_list)
-    commands_vectorized = vectorizer.transform(commands_list)
     model_ml = MultinomialNB()
     command_history = []
     time_history = []
-    training_scheduled = False
-    max_history_size = 100  # Limitar el historial a los últimos 100 comandos
-    confidence_threshold_day = 75  # Umbral de confianza para horas diurnas
-    confidence_threshold_night = 70  # Umbral de confianza para horas nocturnas
-    train_batch_size = 5  # Número de comandos para desencadenar el entrenamiento
+    max_history_size = 100
+    confidence_threshold = {
+        "day": 75,
+        "night": 70,
+    }
+    train_batch_size = 5
 
     # Estado inicial de los dispositivos
     state = {
         "luces_cabina": False,
-        "luces_lectura": False,
+        "luces_exteriores": False,
         "puerta": False,
+        "nivel_combustible": None,
+        "motor_encendido": False,
     }
 
-    # Lock reentrante para asegurar acceso seguro al estado compartido
+    # Lock para acceso seguro al estado compartido
     state_lock = threading.RLock()
 
     @classmethod
@@ -55,78 +59,86 @@ class CommandHandler:
     @classmethod
     def get_best_match(cls, command):
         current_hour = time.localtime().tm_hour
-        if 22 <= current_hour or current_hour <= 6:
-            confidence_threshold = cls.confidence_threshold_night
-        else:
-            confidence_threshold = cls.confidence_threshold_day
-        best_match, confidence = fuzz.extractOne(command, commands_list)
-        logging.debug(f"Mejor coincidencia: {best_match} con confianza {confidence}%")
-        return best_match if confidence > confidence_threshold else None
+        confidence_threshold = cls.confidence_threshold["night"] if 22 <= current_hour or current_hour <= 6 else cls.confidence_threshold["day"]
+        best_match, confidence = fuzz.extractOne(command, cls.commands_list)
+        return best_match if confidence >= confidence_threshold else None
 
     @classmethod
     def execute_command(cls, command):
-        sender = CanSender()
+        message = None
         with cls.state_lock:
-            if "encender luces de cabina" == command:
+            sender = CanSender()
+
+            if command == "encender luces de cabina":
                 if not cls.state["luces_cabina"]:
                     cls.state["luces_cabina"] = True
-                    message = "Luces de cabina encendidas."
-                    sender.send_message()
+                    sender.lights_command(exterior=cls.state['luces_exteriores'], interior=True)
                 else:
                     message = "Las luces de cabina ya están encendidas."
-            elif "apagar luces de cabina" == command:
+
+            elif command == "apagar luces de cabina":
                 if cls.state["luces_cabina"]:
                     cls.state["luces_cabina"] = False
-                    message = "Luces de cabina apagadas."
+                    sender.lights_command(exterior=cls.state['luces_exteriores'], interior=False)
                 else:
                     message = "Las luces de cabina ya están apagadas."
-            elif "encender luces de lectura" == command:
-                if not cls.state["luces_lectura"]:
-                    cls.state["luces_lectura"] = True
-                    message = "Luces de lectura encendidas."
+
+            elif command == "encender luces exteriores":
+                if not cls.state["luces_exteriores"]:
+                    cls.state["luces_exteriores"] = True
+                    sender.lights_command(exterior=True, interior=cls.state['luces_cabina'])
                 else:
-                    message = "Las luces de lectura ya están encendidas."
-            elif "apagar luces de lectura" == command:
-                if cls.state["luces_lectura"]:
-                    cls.state["luces_lectura"] = False
-                    message = "Luces de lectura apagadas."
+                    message = "Las luces exteriores ya están encendidas."
+
+            elif command == "apagar luces exteriores":
+                if cls.state["luces_exteriores"]:
+                    sender.lights_command(exterior=False, interior=cls.state['luces_cabina'])
+                    cls.state["luces_exteriores"] = False
                 else:
-                    message = "Las luces de lectura ya están apagadas."
-            elif "abrir puerta" == command:
+                    message = "Las luces exteriores ya están apagadas."
+
+            elif command == "abrir puerta":
                 if not cls.state["puerta"]:
+                    sender.door_command(True)
                     cls.state["puerta"] = True
-                    message = "Puerta abierta."
                 else:
                     message = "La puerta ya está abierta."
-            elif "cerrar puerta" == command:
+
+            elif command == "cerrar puerta":
                 if cls.state["puerta"]:
+                    sender.door_command(False)
                     cls.state["puerta"] = False
-                    message = "Puerta cerrada."
                 else:
                     message = "La puerta ya está cerrada."
+
+            elif command == "consultar nivel de combustible":
+                sender.fuel_level_request()
+                # Simula que el nivel será actualizado por un receptor
+                message = "Solicitando nivel de combustible. Consulte el receptor para el valor actualizado."
+
+            elif command == "consultar estado del motor":
+                message = f"El motor está {'encendido' if cls.state['motor_encendido'] else 'apagado'}."
+
             else:
-                # Si el comando no coincide exactamente, intentamos encontrar el mejor match
                 best_match = cls.get_best_match(command)
                 if best_match:
-                    # Llamamos recursivamente a execute_command con el mejor match
                     cls.execute_command(best_match)
                     return
                 else:
                     cls.fallback_command(command)
                     return
-        # Fuera del lock
-        logging.info(message)
+        if message:
+          logging.info(message)
 
     @classmethod
     def fallback_command(cls, command):
-        suggestions = fuzz.extract(command, commands_list, limit=3)
+        suggestions = fuzz.extract(command, cls.commands_list, limit=3)
         if suggestions:
-            logging.warning(f"No se reconoció el comando: '{command}'. ¿Quizás quisiste decir:")
+            logging.warning(f"No se reconoció el comando: '{command}'. ¿Quizás quisiste decir?")
             for suggestion, confidence in suggestions:
-                if confidence > 50:  # Umbral para mostrar sugerencias
-                    logging.info(f"- {suggestion} (confianza: {confidence}%)")
+                  logging.info(f"- {suggestion} (confianza: {confidence}%)")
         else:
-            logging.warning(f"No se encontró ninguna sugerencia para el comando: '{command}'")
+            logging.warning(f"No se encontraron sugerencias para el comando: '{command}'.")
 
     @classmethod
     def schedule_training(cls, command, hour):
@@ -153,10 +165,15 @@ class CommandHandler:
     @classmethod
     def display_help(cls):
         logging.info("Lista de comandos disponibles:")
-        for command in commands_list:
+        for command in cls.commands_list:
             logging.info(f"- {command}")
         logging.info("Para obtener ayuda, puedes decir 'ayuda'.")
 
+    @classmethod
+    def get_state(cls):
+        with cls.state_lock:
+            return cls.state.copy()
+        
     @classmethod
     def get_state(cls):
         with cls.state_lock:
